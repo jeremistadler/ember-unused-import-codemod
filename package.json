@@ -2,7 +2,7 @@
   "name": "ember-unused-import-codemod",
   "version": "1.0.0",
   "description": "Remove unused imports in an ember application",
-  "main": "index.js",
+  "bin": "./bin/ember-k-codemod.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -10,7 +10,7 @@
     "type": "git",
     "url": "git+https://github.com/snewcomer/ember-unused-import-codemod.git"
   },
-  "author": "",
+  "author": "Scott Newcomer",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/snewcomer/ember-unused-import-codemod/issues"
