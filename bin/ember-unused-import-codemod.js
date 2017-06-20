@@ -99,7 +99,7 @@ function buildReport() {
     });
 
     // If there's anything to report, convert the JSON tuple into human-formatted
-    // markdown and write it to EMBER_K_REPORT.md.
+    // markdown and write it to EMBER_UNUSED_IMPORT_REPORT.md.
     if (report.length) {
       report = report.map(line => {
         let type = line[0];
@@ -110,10 +110,10 @@ function buildReport() {
         }
       });
 
-      fs.writeFileSync("EMBER_K_REPORT.md", "## Module Report\n" + report.join("\n"));
-      console.log(chalk.yellow("\nDone! Some files could not be upgraded automatically. See " + chalk.blue("EMBER_K_REPORT.md") + "."));
+      fs.writeFileSync("EMBER_UNUSED_IMPORT_REPORT.md", "## Module Report\n" + report.join("\n"));
+      console.log(chalk.yellow("\nDone! Some files could not be upgraded automatically. See " + chalk.blue("EMBER_UNUSED_IMPORT_REPORT.md") + "."));
     } else {
-      console.log(chalk.green("\nDone! All uses of the Ember.K have been updated."));
+      console.log(chalk.green("\nDone! All uses of the imported Ember have been updated."));
     }
   });
 }

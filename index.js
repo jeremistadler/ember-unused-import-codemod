@@ -11,10 +11,10 @@ function transform(file, api, options) {
 
   let root = j(source);
 
-  let replacements = findUsageOfEmberGlobal(root);
+  let fileContainsEmber = findUsageOfEmberGlobal(root);
 
   // if Ember.* is not used in the file, remove it
-  if (!replacements) {
+  if (fileContainsEmber) {
     return;
   } else {
     // TODO: make command line arg
@@ -51,34 +51,26 @@ function transform(file, api, options) {
   }
 
   /*
-  * Finds all uses of a property looked up on the Ember global (i.e.,
-  * `Ember.something`). Makes sure that it is actually the Ember global
-  * and not another variable that happens to be called `Ember`.
-  */
+   * Finds all uses of a property looked up on the Ember global (i.e.,
+   * `Ember.something`). Makes sure that it is actually the Ember global
+   * and not another variable that happens to be called `Ember`.
+   */
   function findUsageOfEmberGlobal(root) {
-    return root.find(j.MemberExpression, {
-      object: {
-        name: "Ember"
-      }
-    })
-    .filter(isEmberGlobal(root))
-    .paths();
-  }
-
-  function isEmberGlobal(root) {
-    return function(path) {
-      return !path.scope.declares("Ember") || root.find(j.ImportDeclaration, {
-        specifiers: [{
-          type: "ImportDefaultSpecifier",
-          local: {
-            name: "Ember"
-          }
-        }],
-        source: {
-          value: "ember"
+    const isMember = root.find(j.MemberExpression, {
+        object: {
+          name: "Ember"
         }
       }).size() > 0;
-    };
+    const isVariable = root.find(j.VariableDeclaration, {
+      declarations: [{
+        type: "VariableDeclarator",
+        init: {
+          type: "Identifier",
+          name: "Ember"
+        }
+      }]
+    }).size() > 0;
+    return isMember || isVariable;
   }
 
 }
