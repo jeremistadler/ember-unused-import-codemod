@@ -2,7 +2,7 @@
   "name": "ember-unused-import-codemod",
   "version": "1.0.1",
   "description": "Remove unused imports in an ember application",
-  "bin": "./bin/ember-k-codemod.js",
+  "bin": "./bin/ember-unused-import-codemod.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
