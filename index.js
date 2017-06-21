@@ -11,25 +11,26 @@ function transform(file, api, options) {
 
   let root = j(source);
 
-  let fileContainsEmber = findUsageOfEmberGlobal(root);
-
-  // if Ember.* is not used in the file, remove it
-  if (fileContainsEmber) {
-    return;
-  } else {
-    // TODO: make command line arg
-    let modules = removeUnusedModules(root);
-  }
+  let modules = findExistingModules(root);
+  modules.modules.forEach((mod) => {
+    const isUsed = findUsageOfImport(root, mod.local);
+    if (!isUsed) {
+      if (mod.imported === 'default') {
+        removeImportByLocal(root, mod.source)
+      }
+    }
+  });
 
   return root.toSource();
 
-  function removeUnusedModules(root) {
+  function findExistingModules(root) {
+    let registry = new ModuleRegistry();
+
     root
       .find(j.ImportDeclaration)
-      .filter(({ node }) => {
+      .forEach(({ node }) => {
         let source = node.source.value;
 
-        let bool = false;
         node.specifiers.forEach(spec => {
           let isDefault = j.ImportDefaultSpecifier.check(spec);
 
@@ -40,37 +41,101 @@ function transform(file, api, options) {
 
           if (!imported) { return; }
 
-          if (source === 'ember') {
-            bool = true;
+          if (!registry.find(source, imported)) {
+            let mod = registry.create(source, imported, spec.local.name);
+            mod.node = node;
           }
         });
+      });
 
-        return bool;
-      })
-      .remove();
+    return registry;
   }
 
   /*
-   * Finds all uses of a property looked up on the Ember global (i.e.,
-   * `Ember.something`). Makes sure that it is actually the Ember global
-   * and not another variable that happens to be called `Ember`.
+   * find if identifier is used mor than once
    */
-  function findUsageOfEmberGlobal(root) {
-    const isMember = root.find(j.MemberExpression, {
-        object: {
-          name: "Ember"
-        }
-      }).size() > 0;
-    const isVariable = root.find(j.VariableDeclaration, {
-      declarations: [{
-        type: "VariableDeclarator",
-        init: {
-          type: "Identifier",
-          name: "Ember"
-        }
-      }]
-    }).size() > 0;
-    return isMember || isVariable;
+  function findUsageOfImport(root, local) {
+    return root.find(j.Identifier, {
+      name: local
+    }).size() > 1;
   }
 
+  // function isNotEmberGlobal(local) {
+  //   return function(path) {
+  //     let localEmber = !path.scope.isGlobal;
+  //     return localEmber;
+  //   };
+  // }
+
+  function removeImportByLocal(root, source) {
+    return root.find(j.ImportDeclaration, {
+      specifiers: [{
+        type: "ImportDefaultSpecifier",
+      }],
+      source: {
+        value: source
+      }
+    })
+    .remove();
+  }
+}
+
+class ModuleRegistry {
+  constructor() {
+    this.bySource = {};
+    this.modules = [];
+  }
+
+  findModule(mod) {
+    return this.find(mod.source, mod.imported);
+  }
+
+  find(source, imported) {
+    let byImported = this.bySource[source];
+
+    if (!byImported) {
+      byImported = this.bySource[source] = {};
+    }
+
+    return byImported[imported] || null;
+  }
+
+  create(source, imported, local) {
+    if (this.find(source, imported)) {
+      throw new Error(`Module { ${source}, ${imported} } already exists.`);
+    }
+
+    let byImported = this.bySource[source];
+    if (!byImported) {
+      byImported = this.bySource[source] = {};
+    }
+
+    let mod = new Module(source, imported, local);
+    byImported[imported] = mod;
+    this.modules.push(mod);
+
+    return mod;
+  }
+
+  get(source, imported, local) {
+    let mod = this.find(source, imported, local);
+    if (!mod) {
+      mod = this.create(source, imported, local);
+    }
+
+    return mod;
+  }
+
+  hasSource(source) {
+    return source in this.bySource;
+  }
+}
+
+class Module {
+  constructor(source, imported, local) {
+    this.source = source; // 'my-app/components/...'
+    this.imported = imported; // 'default' or object destructuring
+    this.local = local; // name of variable in scope of module
+    this.node = null;
+  }
 }
